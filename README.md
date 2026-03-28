@@ -22,6 +22,43 @@ Reviews local code changes (diff from main branch) or the full codebase. Produce
 /local-review [path] [--all [path]]
 ```
 
+## What These Skills Do
+
+These skills teach Claude to:
+- **Always create pending (draft) reviews** — no notifications until you submit from the GitHub UI
+- **Batch all comments** into a single review instead of scattered individual comments
+- **Create code suggestions** using the ` ```suggestion ` syntax for one-click fixes
+- **Use correct `gh api` syntax** with JSON payloads and `--input` (not fragile `-f` array syntax)
+- **Review local code** before opening a PR, with the same rigor as a PR review
+
+## Usage
+
+```
+You: "Review PR #123"
+Claude: *Launches 5 agents, creates pending review with batched comments and suggestions*
+
+You: "/local-review"
+Claude: *Reviews branch diff, writes structured report to /tmp/local-review.md*
+
+You: "/local-review --all ./src/auth"
+Claude: *Reviews all tracked files under src/auth*
+```
+
+## What Makes These Skills Different
+
+**Without these skills**, Claude might:
+- Post comments immediately without batching them
+- Skip pending reviews under time pressure
+- Use incorrect `gh api` syntax that breaks markdown rendering
+- Miss issues that a specialized reviewer (security, performance, etc.) would catch
+
+**With these skills**, Claude will:
+- Always create pending reviews first — you control when they're published
+- Batch all comments together in one coherent review
+- Use code suggestions with ` ```suggestion ` blocks for one-click fixes
+- Run 5 specialized agents in parallel for comprehensive coverage
+- Use correct JSON payload syntax that preserves markdown formatting
+
 ## How It Works
 
 Both skills launch 5 specialized review agents in parallel:
@@ -133,6 +170,37 @@ local-review/               # Local review plugin
     local-review/
       SKILL.md              # Local review skill definition
 CHANGELOG.md                # Version history and changes
+```
+
+## PR Review Workflow
+
+The `github-pr-review` skill enforces this workflow:
+
+### 1. Analyze
+Claude fetches the PR diff and launches 5 specialized agents in parallel.
+
+### 2. Consolidate
+Agent findings are merged by severity, deduplicated, and written to:
+- `/tmp/pr-review-<PR_NUMBER>.json` — API payload
+- `/tmp/pr-review-<PR_NUMBER>.md` — human-readable summary
+
+### 3. Post (or save offline)
+- **Default:** Posts as a pending (draft) review via `gh api`. The review is only visible to you until you submit it from the GitHub UI.
+- **`--offline`:** Writes files only. Review later with `/github-pr-review <PR_NUMBER>` to post.
+
+## Development
+
+To test changes locally:
+
+```bash
+# Symlink for testing
+ln -s $(pwd)/github-pr-review/skills/github-pr-review ~/.claude/skills/github-pr-review
+ln -s $(pwd)/local-review/skills/local-review ~/.claude/skills/local-review
+
+# Or use the plugin marketplace locally
+/plugin marketplace add file://$(pwd)
+/plugin install github-pr-review
+/plugin install local-review
 ```
 
 ## License
