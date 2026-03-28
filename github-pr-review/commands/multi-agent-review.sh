@@ -39,18 +39,18 @@ DIFF_FILE="$OUTPUT_DIR/diff.patch"
 gh pr diff $PR_NUMBER > "$DIFF_FILE"
 
 # Count lines changed
-ADDED_LINES=$(grep -c "^+" "$DIFF_FILE" || true)
-REMOVED_LINES=$(grep -c "^-" "$DIFF_FILE" || true)
+ADDED_LINES=$(grep -c "^+[^+]" "$DIFF_FILE" || true)
+REMOVED_LINES=$(grep -c "^-[^-]" "$DIFF_FILE" || true)
 echo "Lines added: $ADDED_LINES, Lines removed: $REMOVED_LINES"
 echo ""
 
 # Agent definitions
 AGENTS=(
-  "solid-reviewer:SOLID+Architecture:blue"
-  "security-reviewer:Security:red"
-  "performance-reviewer:Performance:yellow"
-  "error-handling-reviewer:Error-Handling:orange"
-  "boundary-reviewer:Boundary-Conditions:purple"
+  "solid-reviewer:SOLID+Architecture:BLUE"
+  "security-reviewer:Security:RED"
+  "performance-reviewer:Performance:YELLOW"
+  "error-handling-reviewer:Error-Handling:YELLOW"
+  "boundary-reviewer:Boundary-Conditions:PURPLE"
 )
 
 # Create results directory
@@ -92,6 +92,7 @@ export PR_NUMBER COMMIT_SHA RESULTS_DIR BLUE GREEN RED YELLOW PURPLE NC
 echo -e "${BLUE}Launching 5 review agents in parallel...${NC}"
 echo ""
 
+PIDS=()
 for agent_def in "${AGENTS[@]}"; do
   IFS=':' read -r agent_name agent_title agent_color <<< "$agent_def"
   run_agent "$agent_name" "$agent_title" "$agent_color" &
@@ -100,9 +101,14 @@ done
 
 # Wait for all agents to complete
 echo -e "${BLUE}Waiting for all agents to complete...${NC}"
+WAIT_FAIL=0
 for pid in "${PIDS[@]}"; do
-  wait $pid
+  wait "$pid" || WAIT_FAIL=1
 done
+
+if [ "$WAIT_FAIL" -ne 0 ]; then
+  echo -e "${RED}Warning: One or more agents exited with errors${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}=== All agents complete ===${NC}"

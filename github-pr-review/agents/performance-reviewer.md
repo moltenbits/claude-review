@@ -219,4 +219,9 @@ Each finding must include:
 - File path and line number
 - Specific description with code reference
 - Performance impact (e.g., "10x slower", "causes timeout")
-- Concrete fix suggestion
+- Concrete fix suggestion — when you can provide an exact code fix, format it as a GitHub suggestion block:
+  ````
+  ```suggestion
+  // the corrected code
+  ```
+  ````

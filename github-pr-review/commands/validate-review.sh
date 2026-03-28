@@ -64,33 +64,33 @@ else
   echo ""
   echo "3. Validating each comment..."
 
-  jq -c '.comments[]' "$JSON_FILE" | while read -r comment; do
-    PATH=$(echo "$comment" | jq -r '.path // empty')
+  while read -r comment; do
+    FILE_PATH=$(echo "$comment" | jq -r '.path // empty')
     POSITION=$(echo "$comment" | jq -r '.position // empty')
     BODY=$(echo "$comment" | jq -r '.body // empty')
 
-    if [ -z "$PATH" ]; then
+    if [ -z "$FILE_PATH" ]; then
       echo "   ✗ Comment missing 'path' field"
       exit 1
     fi
 
     if [ -z "$POSITION" ] || [ "$POSITION" = "null" ]; then
-      echo "   ✗ Comment on '$PATH' missing 'position' field"
+      echo "   ✗ Comment on '$FILE_PATH' missing 'position' field"
       exit 1
     fi
 
     if ! echo "$POSITION" | grep -qE '^[0-9]+$'; then
-      echo "   ✗ Comment on '$PATH' has invalid position: '$POSITION' (must be a number)"
+      echo "   ✗ Comment on '$FILE_PATH' has invalid position: '$POSITION' (must be a number)"
       exit 1
     fi
 
     if [ -z "$BODY" ] || [ "$BODY" = "null" ]; then
-      echo "   ✗ Comment on '$PATH' at position $POSITION missing 'body' field"
+      echo "   ✗ Comment on '$FILE_PATH' at position $POSITION missing 'body' field"
       exit 1
     fi
 
-    echo "   ✓ $PATH:$POSITION - $(echo "$BODY" | head -c 40)..."
-  done
+    echo "   ✓ $FILE_PATH:$POSITION - $(echo "$BODY" | head -c 40)..."
+  done < <(jq -c '.comments[]' "$JSON_FILE")
 
   echo ""
   echo "4. Checking if files exist in PR diff..."
@@ -128,8 +128,10 @@ else
       position = total_lines + 1
 
       # Format: @@ -old_start,old_count +new_start,new_count @@
-      match($0, /\+([0-9]+),([0-9]+)/, arr)
-      new_count = arr[2]
+      # Extract the +new_start,new_count portion portably (no gawk match with 3 args)
+      split($3, plus_parts, ",")
+      sub(/^\+/, "", plus_parts[1])
+      new_count = plus_parts[2] + 0
 
       hunk_max = position + new_count - 1
 
@@ -156,24 +158,24 @@ else
 
   # Check each comment's position is valid
   VALIDATION_FAILED=0
-  jq -c '.comments[]' "$JSON_FILE" | while read -r comment; do
-    PATH=$(echo "$comment" | jq -r '.path')
+  while read -r comment; do
+    FILE_PATH=$(echo "$comment" | jq -r '.path')
     POSITION=$(echo "$comment" | jq -r '.position')
 
-    RANGE=$(get_position_range "$PATH" "$PR_NUMBER")
+    RANGE=$(get_position_range "$FILE_PATH" "$PR_NUMBER")
     MIN_POS=$(echo "$RANGE" | cut -d: -f1)
     MAX_POS=$(echo "$RANGE" | cut -d: -f2)
 
     if [ "$MIN_POS" = "0" ] && [ "$MAX_POS" = "0" ]; then
-      echo "   ⚠ $PATH:$POSITION - Could not determine position range"
+      echo "   ⚠ $FILE_PATH:$POSITION - Could not determine position range"
     elif [ "$POSITION" -ge "$MIN_POS" ] && [ "$POSITION" -le "$MAX_POS" ]; then
-      echo "   ✓ $PATH:$POSITION - Valid (range: $MIN_POS-$MAX_POS)"
+      echo "   ✓ $FILE_PATH:$POSITION - Valid (range: $MIN_POS-$MAX_POS)"
     else
-      echo "   ✗ $PATH:$POSITION - INVALID! Position $POSITION out of range [$MIN_POS-$MAX_POS]"
-      echo "     → Run: ./commands/validate-position.sh $PR_NUMBER $PATH $POSITION"
+      echo "   ✗ $FILE_PATH:$POSITION - INVALID! Position $POSITION out of range [$MIN_POS-$MAX_POS]"
+      echo "     → Run: ./commands/validate-position.sh $PR_NUMBER $FILE_PATH $POSITION"
       VALIDATION_FAILED=1
     fi
-  done
+  done < <(jq -c '.comments[]' "$JSON_FILE")
 
   if [ "$VALIDATION_FAILED" -eq 1 ]; then
     echo ""

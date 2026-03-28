@@ -38,11 +38,20 @@ fi
 echo -e "${BLUE}=== Valid Positions for: $FILE_PATH in PR #$PR_NUMBER ===${NC}"
 echo ""
 
-# Get the diff for the specific file
-DIFF_OUTPUT=$(gh pr diff "$PR_NUMBER" -- "$FILE_PATH" 2>/dev/null)
+# Get the full PR diff and filter for the specific file
+DIFF_OUTPUT=$(gh pr diff "$PR_NUMBER" 2>/dev/null | awk -v file="$FILE_PATH" '
+  /^diff --git / {
+    # Check if this diff block is for our target file
+    in_file = 0
+    if (index($0, "b/" file) > 0) {
+      in_file = 1
+    }
+  }
+  in_file { print }
+')
 
 if [ -z "$DIFF_OUTPUT" ]; then
-  echo -e "${RED}❌ Error: File '$FILE_PATH' not found in PR #$PR_NUMBER diff${NC}"
+  echo -e "${RED}Error: File '$FILE_PATH' not found in PR #$PR_NUMBER diff${NC}"
   echo ""
   echo -e "${BLUE}Available files in PR:${NC}"
   gh pr diff "$PR_NUMBER" --name-only 2>/dev/null | head -20 | while read -r f; do
@@ -52,59 +61,59 @@ if [ -z "$DIFF_OUTPUT" ]; then
 fi
 
 # Calculate total positions and show sample lines
-echo "$DIFF_OUTPUT" | awk -v cyan="$CYAN" -v green="$GREEN" -v blue="$BLUE" -v nc="$NC" '
+# GitHub diff positions count every line sequentially (context + added + removed),
+# excluding the @@ hunk header lines themselves.
+echo "$DIFF_OUTPUT" | awk -v cyan="$CYAN" -v green="$GREEN" -v blue="$BLUE" -v red="$RED" -v nc="$NC" '
 BEGIN {
   position = 0
   in_hunk = 0
-  total_lines = 0
   sample_count = 0
   max_samples = 20
 }
 
 /^@@/ {
   # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
-  match($0, /@@[[:space:]]+([^@]+)@@/, hunk_parts)
-  if (hunk_parts[1] != "") {
-    split(hunk_parts[1], parts, /[[:space:]]+/)
-    for (i in parts) {
-      if (parts[i] ~ /^\+/) {
-        gsub(/\+/, "", parts[i])
-        split(parts[i], new_parts, ",")
-        new_count = (new_parts[2] != "") ? new_parts[2] + 0 : 1
-        total_lines += new_count
-
-        # Print hunk info
-        printf blue "\n  Hunk: " hunk_parts[1] " → " nc
-        printf green "Positions: " position + 1 "-" position + new_count nc "\n"
-        position += new_count
-      }
-    }
+  # Extract the text between @@ markers using split instead of gawk-specific match()
+  header = $0
+  sub(/^@@[[:space:]]+/, "", header)
+  sub(/[[:space:]]+@@.*/, "", header)
+  if (header != "") {
+    split(header, parts, /[[:space:]]+/)
+    hunk_start = position + 1
+    printf blue "\n  Hunk: " header " (starting at position " hunk_start ")" nc "\n"
   }
+  in_hunk = 1
   next
 }
 
 in_hunk && (/^[-+ ]/ || /^$/) {
-  # Count all lines in hunk
+  # Count every non-@@ line sequentially as a position
+  position++
+
   if (sample_count < max_samples) {
     prefix = substr($0, 1, 1)
     rest = substr($0, 2)
-    line_num = position - total_lines + sample_count + 1
 
     if (prefix == "+") {
-      printf cyan "    Position " line_num ":" nc " " green "+" rest nc "\n"
+      printf cyan "    Position " position ":" nc " " green "+" rest nc "\n"
     } else if (prefix == "-") {
-      printf "    Position " line_num ":" red "-" rest nc "\n"
+      printf cyan "    Position " position ":" nc " " red "-" rest nc "\n"
     } else {
-      printf "    Position " line_num ":" " " rest "\n"
+      printf "    Position " position ": " rest "\n"
     }
     sample_count++
   }
   next
 }
 
+/^diff --git / {
+  # Stop if we hit another file diff block (shouldnt happen since we pre-filtered)
+  in_hunk = 0
+}
+
 END {
   printf "\n"
-  printf green "  Total valid positions: 1-" total_lines nc "\n"
+  printf green "  Total valid positions: 1-" position nc "\n"
   printf "\n"
   printf blue "  Usage examples:" nc "\n"
   printf "    Validate: ./commands/validate-position.sh '"'"'" pr_num "'"'"' '"'"'" file_path "'"'"' <position>\n"

@@ -34,8 +34,11 @@ const user = await User.findBy({ id: userId });
 ### Command Injection
 
 ```typescript
-// ❌ CRITICAL: Command injection risk
+// ❌ CRITICAL: Command injection via shell interpolation
 const output = exec(`ls ${userPath}`);
+
+// ⚠️ CAUTION: Array-form spawn is safe from shell injection,
+// but still has path traversal risk (e.g., userFile = "../../etc/passwd")
 const result = spawn('cat', [userFile]);
 
 // ✅ SAFE: Use proper APIs
@@ -55,7 +58,7 @@ div.innerHTML = userComment; // User comment stored and displayed
 
 // ❌ CRITICAL: Reflected XSS
 const query = new URLSearchParams(window.location.search);
-div.textContent = query.get('name'); // Should use textContent!
+div.innerHTML = query.get('name'); // Untrusted input rendered as HTML!
 
 // ✅ SAFE: Proper escaping
 div.textContent = userComment;

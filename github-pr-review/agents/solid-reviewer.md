@@ -139,4 +139,9 @@ Each finding must include:
 - Principle violated
 - File path and line number
 - Specific description with code reference
-- Concrete fix suggestion
+- Concrete fix suggestion — when you can provide an exact code fix, format it as a GitHub suggestion block:
+  ````
+  ```suggestion
+  // the corrected code
+  ```
+  ````

@@ -23,9 +23,9 @@ function getUserEmail(user: User | null): string | undefined {
   return user?.email;
 }
 
-// ✅ SAFE: Null assertion (when you're sure)
+// ⚠️ CAUTION: Null assertion (compile-time only, no runtime check)
 function getUserEmail(user: User): string {
-  return user!.email; // Asserts non-null
+  return user!.email; // TypeScript-only assertion, crashes if actually null
 }
 ```
 
@@ -38,25 +38,22 @@ function getUserEmail(user: User): string {
 ### Undefined vs Null
 
 ```typescript
-// ❌ BAD: Confuses undefined and null
+// ✅ IDIOMATIC: Null/undefined check via loose equality
 function hasValue(value: any): boolean {
-  return value != null; // True for both null and undefined!
+  return value != null; // Equivalent to value !== null && value !== undefined
 }
 
-// ✅ GOOD: Explicit checks
-function hasValue(value: any): boolean {
-  return value !== null && value !== undefined;
-}
+// ⚠️ CAUTION: Loose equality with non-null types can be surprising
+if (value == 0) { }   // true for 0, '', false, null? No — but coerces types
+if (value == '') { }   // true for 0, '', false — unexpected matches
+
+// ✅ GOOD: Use strict equality when comparing against specific values
+if (value === 0) { }
+if (value === '') { }
 
 // ✅ GOOD: Nullish coalescing
 const value = input ?? 'default'; // Only null/undefined
 const value = input || 'default'; // Also 0, '', false
-
-// ❌ BAD: Loose equality
-if (value == null) { } // Matches both null and undefined
-
-// ✅ GOOD: Strict equality
-if (value === null || value === undefined) { }
 ```
 
 **Severity Mapping:**

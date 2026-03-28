@@ -285,12 +285,8 @@ try {
 // ❌ BAD: Error without context
 throw new Error('Failed to process');
 
-// ✅ GOOD: Error with context
-throw new Error('Failed to process payment', {
-  userId: user.id,
-  amount: payment.amount,
-  currency: payment.currency
-});
+// ✅ GOOD: Error with context via message interpolation
+throw new Error(`Failed to process payment: userId=${user.id}, amount=${payment.amount}, currency=${payment.currency}`);
 
 // ✅ GOOD: Structured error
 class PaymentError extends Error {
@@ -351,7 +347,7 @@ function getUserEmail(user: User): string {
 
 ```typescript
 // ❌ BAD: No input validation
-function createUser(data: any) {
+async function createUser(data: any) {
   await db.insert('users', {
     name: data.name,
     email: data.email
@@ -367,7 +363,7 @@ const UserSchema = z.object({
   email: z.string().email()
 });
 
-function createUser(data: unknown) {
+async function createUser(data: unknown) {
   const validated = UserSchema.parse(data);
   await db.insert('users', validated);
 }

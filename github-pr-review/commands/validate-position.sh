@@ -32,8 +32,8 @@ if [ -z "$PR_NUMBER" ] || [ -z "$FILE_PATH" ] || [ -z "$POSITION" ]; then
   exit 1
 fi
 
-# Check if position is a valid number
-if ! echo "$POSITION" | grep -qE '^[0-9]+$'; then
+# Check if position is a valid number (must be >= 1; diff positions start at 1)
+if ! echo "$POSITION" | grep -qE '^[1-9][0-9]*$'; then
   echo -e "${RED}❌ Error: Position must be a positive integer, got '$POSITION'${NC}"
   exit 1
 fi
@@ -52,58 +52,51 @@ if [ -z "$DIFF_OUTPUT" ]; then
 fi
 
 # Calculate valid position ranges from diff hunks
-# Format: @@ -old_start,old_count +new_start,new_count @@
+# GitHub diff positions count ALL lines (added, removed, context) between @@ headers.
+# Position 1 is the @@ line of the first hunk; subsequent lines increment from there.
 calculate_position_ranges() {
   echo "$DIFF_OUTPUT" | awk '
   BEGIN {
-    in_hunk = 0
     position = 0
-    min_pos = ""
-    max_pos = ""
+    hunk_count = 0
+    hunk_start = 0
   }
 
   /^@@/ {
-    # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
-    # The position starts at 1 after this line
-
-    # Extract the part after @@ that contains the ranges
-    match($0, /@@[[:space:]]+([^@]+)@@/, hunk_parts)
-    if (hunk_parts[1] != "") {
-      # Parse: -old_start,old_count +new_start,new_count
-      split(hunk_parts[1], parts, /[[:space:]]+/)
-
-      # Find the part starting with + (new file range)
-      for (i in parts) {
-        if (parts[i] ~ /^\+/) {
-          # Parse +new_start,new_count or +new_start
-          gsub(/\+/, "", parts[i])
-          split(parts[i], new_parts, ",")
-          new_start = new_parts[1] + 0  # Convert to number
-          new_count = (new_parts[2] != "") ? new_parts[2] + 0 : 1
-
-          # Position starts at 1 for each hunk
-          hunk_min = 1
-          hunk_max = new_count
-
-          if (min_pos == "" || hunk_min < min_pos) {
-            min_pos = hunk_min
-          }
-          if (max_pos == "" || hunk_max > max_pos) {
-            max_pos = hunk_max
-          }
-
-          print "HUNK:" hunk_parts[1] " RANGE:" hunk_min "-" hunk_max
-        }
-      }
+    # If we were already in a hunk, print its range
+    if (hunk_count > 0 && position > hunk_start) {
+      print "HUNK:" hunk_label " RANGE:" (hunk_start + 1) "-" position
     }
+
+    # The @@ line itself counts as a position
+    position++
+    hunk_count++
+    hunk_start = position  # lines after @@ start at position+1
+
+    # Extract the hunk header text between @@ markers for display
+    # Use portable approach: gsub to strip leading/trailing @@ markers
+    hunk_label = $0
+    gsub(/^@@[[:space:]]+/, "", hunk_label)
+    gsub(/[[:space:]]+@@.*/, "", hunk_label)
 
     next
   }
 
+  # Skip file header lines (diff --git, index, ---, +++) that come before any hunk
+  hunk_count == 0 { next }
+
+  # Count every line inside a hunk (context, added, removed)
+  { position++ }
+
   END {
-    if (min_pos != "" && max_pos != "") {
-      print "MIN:" min_pos
-      print "MAX:" max_pos
+    # Print the last hunk range
+    if (hunk_count > 0 && position > hunk_start) {
+      print "HUNK:" hunk_label " RANGE:" (hunk_start + 1) "-" position
+    }
+
+    if (hunk_count > 0 && position > 0) {
+      print "MIN:1"
+      print "MAX:" position
     } else {
       print "MIN:0"
       print "MAX:0"

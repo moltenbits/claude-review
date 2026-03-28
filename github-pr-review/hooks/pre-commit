@@ -7,49 +7,51 @@ set -e
 # Get list of staged files
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-# Check if any review JSON files are being committed
-HAS_REVIEW_JSON=false
+# Collect all matching review JSON files
+REVIEW_JSON_FILES=()
 for FILE in $STAGED_FILES; do
   if [[ "$FILE" =~ .*review.*\.json$ ]]; then
-    HAS_REVIEW_JSON=true
-    REVIEW_JSON_FILE="$FILE"
-    break
+    REVIEW_JSON_FILES+=("$FILE")
   fi
 done
 
 # Only validate if review JSON files are being committed
-if [ "$HAS_REVIEW_JSON" = true ]; then
+if [ ${#REVIEW_JSON_FILES[@]} -gt 0 ]; then
   echo "=== Validating positions in review JSON ==="
-  echo "File: $REVIEW_JSON_FILE"
-  echo ""
 
-  # Extract PR number from JSON if available
-  PR_NUMBER=$(grep -o '"pr_number":[[:space:]]*[0-9]*' "$REVIEW_JSON_FILE" 2>/dev/null | head -1 | grep -o '[0-9]*' || echo "")
-
-  if [ -n "$PR_NUMBER" ]; then
-    echo "PR Number: $PR_NUMBER"
-  fi
-
-  # Validate JSON structure
-  if command -v jq &> /dev/null; then
-    if ! jq empty "$REVIEW_JSON_FILE" 2>/dev/null; then
-      echo "❌ Invalid JSON in $REVIEW_JSON_FILE"
-      echo "Please fix the JSON syntax before committing."
-      exit 1
-    fi
-  fi
-
-  # Check for position fields
-  POSITIONS=$(grep -o '"position":[[:space:]]*[0-9]*' "$REVIEW_JSON_FILE" 2>/dev/null | grep -o '[0-9]*' || echo "")
-
-  if [ -n "$POSITIONS" ]; then
-    echo "Found positions: $POSITIONS"
+  for REVIEW_JSON_FILE in "${REVIEW_JSON_FILES[@]}"; do
     echo ""
-    echo "⚠️  Position validation requires PR number."
-    echo "   Run ./commands/validate-review.sh <pr_number> $REVIEW_JSON_FILE before committing."
-  fi
+    echo "File: $REVIEW_JSON_FILE"
 
-  echo "✅ JSON structure validated"
+    # Extract PR number from JSON if available
+    PR_NUMBER=$(grep -o '"pr_number":[[:space:]]*[0-9]*' "$REVIEW_JSON_FILE" 2>/dev/null | head -1 | grep -o '[0-9]*' || echo "")
+
+    if [ -n "$PR_NUMBER" ]; then
+      echo "PR Number: $PR_NUMBER"
+    fi
+
+    # Validate JSON structure
+    if command -v jq &> /dev/null; then
+      if ! jq empty "$REVIEW_JSON_FILE" 2>/dev/null; then
+        echo "❌ Invalid JSON in $REVIEW_JSON_FILE"
+        echo "Please fix the JSON syntax before committing."
+        exit 1
+      fi
+      echo "✅ JSON structure validated"
+    else
+      echo "⚠️  jq is not installed; skipping JSON structure validation"
+    fi
+
+    # Check for position fields
+    POSITIONS=$(grep -o '"position":[[:space:]]*[0-9]*' "$REVIEW_JSON_FILE" 2>/dev/null | grep -o '[0-9]*' || echo "")
+
+    if [ -n "$POSITIONS" ]; then
+      echo "Found positions: $POSITIONS"
+      echo ""
+      echo "⚠️  Position validation requires PR number."
+      echo "   Run ./commands/validate-review.sh <pr_number> $REVIEW_JSON_FILE before committing."
+    fi
+  done
 fi
 
 exit 0

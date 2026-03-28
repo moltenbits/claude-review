@@ -5,7 +5,7 @@
     "email": "[email protected]"
   },
   "metadata": {
-    "description": "Professional GitHub PR review skills for Claude Code",
+    "description": "Professional code review skills for Claude Code — GitHub PRs and local code",
     "version": "2.1.0"
   },
   "plugins": [
@@ -18,6 +18,16 @@
         "name": "Aidan Kinzett"
       },
       "keywords": ["github", "pr", "review", "code-suggestions", "gh-cli", "multi-agent", "security", "performance", "solid", "error-handling", "position-validation", "json-payload"]
+    },
+    {
+      "name": "local-review",
+      "source": "./local-review",
+      "description": "Local code review with 5 specialized agents (SOLID, Security, Performance, Error Handling, Boundaries) producing a structured P0-P3 severity report",
+      "version": "1.0.0",
+      "author": {
+        "name": "James Henderson"
+      },
+      "keywords": ["local", "review", "code-review", "multi-agent", "security", "performance", "solid", "error-handling", "boundary-conditions"]
     }
   ]
 }

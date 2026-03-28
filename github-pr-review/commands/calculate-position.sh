@@ -6,8 +6,9 @@
 #   ./calculate-position.sh 6 app/components/registration/sections/form.tsx
 #
 # This will show the diff with position numbers for easy reference
-# Position 1 = first line after the @@ hunk header
-# ALL lines count (added +, removed -, context , blank)
+# Positions are cumulative across all hunks in a file
+# The @@ hunk header itself counts as a position
+# ALL lines count (added +, removed -, context, blank)
 
 set -e
 
@@ -56,12 +57,12 @@ BEGIN {
 }
 
 /^@@/ {
-  # New hunk starts - position will start at 1 after this line
+  # New hunk starts - the @@ line itself counts as a position
   in_hunk = 1
-  position = 1
+  position++
 
-  # Print the hunk header
-  print blue $0 nc
+  # Print the hunk header with its position
+  printf cyan "Position %d: " nc blue "%s" nc "\n", position, $0
   next
 }
 
@@ -97,9 +98,9 @@ in_hunk && /^$/ {
 
 echo ""
 echo -e "${YELLOW}Key:${NC}"
-echo -e "  ${GREEN}+ Added line${NC}    ${cyan}→ Use this position in your review${NC}"
-echo -e "  ${RED}- Removed line${NC}  ${cyan}→ Shows what was removed${NC}"
-echo -e "  ${BLUE}  Context line${NC}  ${cyan}→ Shows surrounding context${NC}"
+echo -e "  ${GREEN}+ Added line${NC}    ${CYAN}→ Use this position in your review${NC}"
+echo -e "  ${RED}- Removed line${NC}  ${CYAN}→ Shows what was removed${NC}"
+echo -e "  ${BLUE}  Context line${NC}  ${CYAN}→ Shows surrounding context${NC}"
 echo ""
 echo -e "${BLUE}To validate a specific position:${NC}"
 echo -e "  ${GREEN}./commands/validate-position.sh $PR_NUMBER $FILE_PATH <position>${NC}"
