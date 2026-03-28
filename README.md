@@ -4,147 +4,76 @@ Based on [aidankinzett/claude-git-pr-skill#3](https://github.com/aidankinzett/cl
 
 Claude Code skills for consistent, professional code reviews — both GitHub PRs and local code — using 5 specialized agents with P0-P3 severity scoring.
 
-## What This Skill Does
+## Skills
 
-This skill teaches Claude to:
-- **Always use pending reviews** to batch comments (even under time pressure)
-- **Create code suggestions** using the ```suggestion syntax
-- **Choose the right event type** (COMMENT, APPROVE, or REQUEST_CHANGES)
-- **Use correct `gh api` syntax** with proper quoting and flags
+### `/github-pr-review`
+
+Reviews a GitHub pull request and creates a **pending (draft) review**. The draft is only visible to the authenticated user until they submit it from the GitHub UI — no notifications are sent, and the user can edit comments and choose the final event type before publishing.
+
+```
+/github-pr-review [PR_NUMBER] [--offline]
+```
+
+### `/local-review`
+
+Reviews local code changes (diff from main branch) or the full codebase. Produces a structured markdown report at `/tmp/local-review.md`.
+
+```
+/local-review [path] [--all [path]]
+```
+
+## How It Works
+
+Both skills launch 5 specialized review agents in parallel:
+
+| Agent | Focus Area |
+|-------|-----------|
+| **SOLID + Architecture** | SRP violations, god classes, coupling |
+| **Security** | Injection, auth issues, hardcoded secrets, data exposure |
+| **Performance** | N+1 queries, inefficient algorithms, missing caching |
+| **Error Handling** | Swallowed exceptions, missing boundaries, async issues |
+| **Boundary Conditions** | Null dereference, empty collections, off-by-one |
+
+Findings are scored P0-P3 with a confidence threshold of 80%+:
+
+| Level | Name | Meaning |
+|-------|------|---------|
+| **P0** | Critical | Must fix — security vulnerability, data loss, crash |
+| **P1** | High | Should fix — correctness issue, significant problem |
+| **P2** | Medium | Consider fixing — code smell, minor performance issue |
+| **P3** | Low | Optional improvement — style, naming, clarity |
 
 ## Installation
 
-### Option 1: Plugin Marketplace (Recommended)
+### Manual Copy
 
-Install directly from the marketplace using Claude Code:
-
-```bash
-# Add this marketplace
-/plugin marketplace add aidankinzett/claude-git-pr-skill
-
-# Install the plugin
-/plugin install github-pr-review
-
-# Verify installation
-/plugin list
-```
-
-**For team-wide installation**, add to `.claude/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": [
-    {
-      "name": "github-pr-skills",
-      "source": {
-        "source": "github",
-        "repo": "aidankinzett/claude-git-pr-skill"
-      }
-    }
-  ],
-  "plugins": {
-    "github-pr-review": {
-      "enabled": true
-    }
-  }
-}
-```
-
-### Option 2: Manual Copy
-
-Copy the skill directly to your skills directory:
+Copy the skills directly to your skills directory:
 
 ```bash
-# Personal (all projects)
+# github-pr-review (all projects)
 cp -r github-pr-review/skills/github-pr-review ~/.claude/skills/
 
-# Project-specific
+# local-review (all projects)
+cp -r local-review/skills/local-review ~/.claude/skills/
+
+# Or project-specific
 cp -r github-pr-review/skills/github-pr-review .claude/skills/
+cp -r local-review/skills/local-review .claude/skills/
 ```
 
-## Usage
-
-Once installed, Claude will automatically use this skill when you ask it to review pull requests. For example:
-
-```
-You: "Review PR #123 and suggest improvements"
-Claude: *Uses github-pr-review skill to create pending review with batched comments*
-```
-
-## What Makes This Skill Different
-
-**Without this skill**, Claude might:
-- Post comments immediately without showing you first
-- Skip pending reviews under time pressure
-- Use incorrect `gh api` syntax
-- Choose the wrong event type
-- Post comments you didn't approve
-
-**With this skill**, Claude will:
-- ✅ **Show you exactly what will be posted** before posting
-- ✅ **Ask for explicit approval** using yes/no questions
-- ✅ Always create pending reviews first
-- ✅ Batch all comments together
-- ✅ Use code suggestions with ```suggestion blocks
-- ✅ Choose appropriate event types (APPROVE for minor suggestions, REQUEST_CHANGES for blocking issues)
-- ✅ Use correct syntax (single quotes around `comments[][]` parameters)
-
-## Workflow Pattern
-
-The skill enforces this workflow:
-
-**1. Draft → 2. Show & Approve → 3. Post**
-
-### Step 1: Draft Review
-Claude analyzes the PR and prepares comments with code suggestions.
-
-### Step 2: Show & Get Approval
-Claude shows you EXACTLY what will be posted:
-- Each comment with file and line number
-- Code suggestions formatted
-- Event type (APPROVE/REQUEST_CHANGES/COMMENT)
-- Overall review message
-
-You review and approve (or request changes).
-
-### Step 3: Post Review (Technical)
-
-After your approval, Claude posts using this pattern:
+For `github-pr-review`, also copy the supporting directories:
 
 ```bash
-# Step 1: Create PENDING review with all comments
-gh api repos/:owner/:repo/pulls/123/reviews \
-  -X POST \
-  -f commit_id="<SHA>" \
-  -f 'comments[][path]=file.ts' \
-  -F 'comments[][line]=42' \
-  -f 'comments[][side]=RIGHT' \
-  -f 'comments[][body]=Comment with ```suggestion block...' \
-  --jq '{id, state}'
-
-# Step 2: Submit when ready
-gh api repos/:owner/:repo/pulls/123/reviews/<REVIEW_ID>/events \
-  -X POST \
-  -f event="APPROVE" \
-  -f body="Overall review message"
+cp -r github-pr-review/agents ~/.claude/skills/github-pr-review/
+cp -r github-pr-review/commands ~/.claude/skills/github-pr-review/
+cp -r github-pr-review/references ~/.claude/skills/github-pr-review/
+cp -r github-pr-review/templates ~/.claude/skills/github-pr-review/
 ```
-
-## Benefits
-
-- **Consistent workflow** across all PR reviews
-- **Professional batched comments** instead of scattered notifications
-- **Correct syntax** every time
-- **Better decision making** on event types
-- **Time-tested pattern** that works under pressure
 
 ## Prerequisites
 
 - Claude Code
-- GitHub CLI (`gh`) installed and authenticated
-
-## License
-
-MIT (or specify your license)
+- GitHub CLI (`gh`) installed and authenticated (for `github-pr-review`)
 
 ## Repository Structure
 
@@ -166,49 +95,6 @@ local-review/               # Local review plugin
 CHANGELOG.md                # Version history and changes
 ```
 
-## Versioning
+## License
 
-This skill follows [Semantic Versioning](https://semver.org/):
-- **Current version:** 1.0.0
-- **Version location:** `.claude-plugin/marketplace.json`
-- **Change history:** See [CHANGELOG.md](CHANGELOG.md)
-
-### Updating the Version
-
-When making changes:
-
-1. **Update CHANGELOG.md** - Add entries under `[Unreleased]`
-2. **When releasing:**
-   - Move unreleased items to new version section in CHANGELOG.md
-   - Update `version` in `.claude-plugin/marketplace.json`
-   - Create git tag: `git tag -a v1.0.1 -m "Release v1.0.1"`
-   - Push with tags: `git push --tags`
-
-**Version numbers:**
-- **PATCH** (1.0.1) - Bug fixes, typos, small improvements
-- **MINOR** (1.1.0) - New features, backwards compatible
-- **MAJOR** (2.0.0) - Breaking changes to skill behavior
-
-## Contributing
-
-This skill was created using Test-Driven Development for skills:
-1. Baseline tests identified violations (posting immediately under time pressure, no user approval)
-2. Skill was written to address those violations
-3. Tests verified the skill works correctly
-4. Edge cases were tested and handled
-5. Approval workflow added after user feedback
-
-If you find edge cases where the skill doesn't work correctly, please open an issue!
-
-## Development
-
-To test changes locally:
-
-```bash
-# Symlink for testing
-ln -s $(pwd)/github-pr-review/skills/github-pr-review ~/.claude/skills/github-pr-review
-
-# Or use the plugin marketplace locally
-/plugin marketplace add file://$(pwd)
-/plugin install github-pr-review
-```
+MIT
