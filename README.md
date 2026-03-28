@@ -202,7 +202,3 @@ ln -s $(pwd)/local-review/skills/local-review ~/.claude/skills/local-review
 /plugin install github-pr-review
 /plugin install local-review
 ```
-
-## License
-
-MIT
