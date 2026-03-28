@@ -14,6 +14,9 @@ Reviews a GitHub pull request and creates a **pending (draft) review**. The draf
 /github-pr-review [PR_NUMBER] [--offline]
 ```
 
+- **`PR_NUMBER`** — the PR to review. If omitted, resolves from the current branch.
+- **`--offline`** — write review JSON and markdown files locally but don't post to GitHub. You can review the output and then publish later by re-running without `--offline`.
+
 ### `/local-review`
 
 Reviews local code changes (diff from main branch) or the full codebase. Produces a structured markdown report at `/tmp/local-review.md`.
@@ -21,6 +24,11 @@ Reviews local code changes (diff from main branch) or the full codebase. Produce
 ```
 /local-review [path] [--all [path]]
 ```
+
+- **No arguments** — review only code changed from the main branch.
+- **`path`** — scope the diff review to a file or glob (e.g. `src/auth.ts`, `src/**`).
+- **`--all`** — review all tracked files in the repository, not just the diff.
+- **`--all path`** — review all tracked files under a specific directory (e.g. `--all ./src/auth`).
 
 ## What These Skills Do
 
