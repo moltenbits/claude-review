@@ -45,6 +45,46 @@ Findings are scored P0-P3 with a confidence threshold of 80%+:
 
 ## Installation
 
+### Plugin Marketplace (Recommended)
+
+Install directly from the marketplace using Claude Code:
+
+```bash
+# Add this marketplace
+/plugin marketplace add moltenbits/claude-review
+
+# Install the plugins
+/plugin install github-pr-review
+/plugin install local-review
+
+# Verify installation
+/plugin list
+```
+
+**For team-wide installation**, add to `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": [
+    {
+      "name": "claude-review",
+      "source": {
+        "source": "github",
+        "repo": "moltenbits/claude-review"
+      }
+    }
+  ],
+  "plugins": {
+    "github-pr-review": {
+      "enabled": true
+    },
+    "local-review": {
+      "enabled": true
+    }
+  }
+}
+```
+
 ### Manual Copy
 
 Copy the skills directly to your skills directory:
