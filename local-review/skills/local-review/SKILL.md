@@ -215,8 +215,8 @@ Write a single markdown file to `/tmp/local-review.md`:
 
 ### 6. Open the review file
 
-- If `mcp__ide__openFile` tool is available, open `/tmp/local-review.md` in the IDE.
-- Otherwise, run: `open /tmp/local-review.md`
+- If `mcp__ide__openFile` tool is available, use it to open `/tmp/local-review.md` in the IDE.
+- Otherwise, run: `idea <current_project_dir> /tmp/local-review.md` (falls back to `open /tmp/local-review.md` if `idea` is not available). The project dir ensures IntelliJ opens the file in the correct window.
 
 ### 7. Tell the user
 

@@ -375,7 +375,7 @@ For small PRs or when the user asks for a focused review on a specific aspect:
 - Do NOT run `post-review.sh`. Do NOT call `gh api`.
 - Open the MD file for the user to review:
   - If `mcp__ide__openFile` tool is available, use it to open `/tmp/pr-review-<PR_NUMBER>.md` in the IDE.
-  - Otherwise, run: `open /tmp/pr-review-<PR_NUMBER>.md`
+  - Otherwise, run: `idea <current_project_dir> /tmp/pr-review-<PR_NUMBER>.md` (falls back to `open /tmp/pr-review-<PR_NUMBER>.md` if `idea` is not available). The project dir ensures IntelliJ opens the file in the correct window.
 - Tell the user:
   ```
   Review generated for PR #<PR_NUMBER> with <N> comments (offline mode).
