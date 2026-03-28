@@ -1,6 +1,8 @@
-# GitHub PR Review Skill for Claude Code
+# Code Review Skills for Claude Code
 
-A Claude Code skill that ensures consistent, professional GitHub pull request reviews using the `gh` CLI with pending reviews and code suggestions.
+Based on [aidankinzett/claude-git-pr-skill#3](https://github.com/aidankinzett/claude-git-pr-skill/pull/3).
+
+Claude Code skills for consistent, professional code reviews — both GitHub PRs and local code — using 5 specialized agents with P0-P3 severity scoring.
 
 ## What This Skill Does
 
@@ -149,10 +151,18 @@ MIT (or specify your license)
 ```
 .claude-plugin/
   marketplace.json          # Plugin marketplace definition
-github-pr-review/           # Plugin root
-  skills/                   # Skills directory
-    github-pr-review/       # The skill
-      SKILL.md              # Skill definition
+github-pr-review/           # PR review plugin
+  skills/
+    github-pr-review/
+      SKILL.md              # PR review skill definition
+  agents/                   # 5 specialized reviewer agents
+  commands/                 # Helper scripts (post-review, validation, etc.)
+  references/               # Review checklists per agent
+  templates/                # JSON payload templates
+local-review/               # Local review plugin
+  skills/
+    local-review/
+      SKILL.md              # Local review skill definition
 CHANGELOG.md                # Version history and changes
 ```
 
